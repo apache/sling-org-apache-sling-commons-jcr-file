@@ -19,90 +19,108 @@
 package org.apache.sling.commons.jcr.file.internal;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import javax.jcr.Binary;
 import javax.jcr.Node;
 import javax.jcr.RepositoryException;
+import javax.jcr.Session;
+import javax.jcr.ValueFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static java.nio.file.StandardOpenOption.DELETE_ON_CLOSE;
+import static java.nio.file.StandardOpenOption.READ;
+import static java.nio.file.StandardOpenOption.WRITE;
 
 /**
  * https://wiki.apache.org/jackrabbit/JCR%20Binary%20Usecase
  */
 public class JcrFileChannel extends FileChannel {
 
-    private long position;
-
     private final Node node;
+
+    private final Path file = Files.createTempFile(null, null);
+
+    private final FileChannel fileChannel;
 
     private final Logger logger = LoggerFactory.getLogger(JcrFileChannel.class);
 
-    JcrFileChannel(final Node node) throws RepositoryException {
+    JcrFileChannel(final Node node) throws Exception {
         logger.info("JcrFileChannel: {}", node.getPath());
         this.node = node;
+        fileChannel = init();
     }
 
-    private Binary binary() throws RepositoryException {
+    private Binary getBinary() throws RepositoryException {
         return node.getNode("jcr:content").getProperty("jcr:data").getBinary();
     }
 
-    // TODO
-    @Override
-    public int read(ByteBuffer dst) throws IOException {
-        logger.info("read");
-        /*
+    private void setBinary(final Binary binary) throws RepositoryException {
+        node.getNode("jcr:content").setProperty("jcr:data", binary);
+    }
+
+    private FileChannel init() throws IOException {
+        Binary binary = null;
         try {
-            int read = binary().read(dst.array(), position);
-            position = position + read;
-            logger.info("read {} bytes into array of length {}, new position is {}", read, dst.array().length, position);
-            return read;
+            binary = getBinary();
         } catch (Exception e) {
-            logger.error(e.getMessage(), e);
-            throw new IOException(e);
+            logger.error("reading binary failed: {}", e.getMessage(), e);
         }
-        */
-        return 0;
+        if (binary != null) {
+            try (final InputStream inputStream = binary.getStream()) {
+                Files.copy(inputStream, file, REPLACE_EXISTING);
+            } catch (Exception e) {
+                logger.error("copying binary to file failed: {}", e.getMessage(), e);
+            }
+        }
+        return FileChannel.open(file, READ, WRITE);
     }
 
-    // TODO
     @Override
-    public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
+    public int read(final ByteBuffer dst) throws IOException {
+        logger.info("read");
+        return fileChannel.read(dst);
+    }
+
+    @Override
+    public long read(final ByteBuffer[] dsts, final int offset, final int length) throws IOException {
         logger.info("read {} {}", offset, length);
-        return 0;
+        return fileChannel.read(dsts, offset, length);
     }
 
-    // TODO
     @Override
-    public int write(ByteBuffer src) throws IOException {
+    public int write(final ByteBuffer src) throws IOException {
         logger.info("write");
-        return 0;
+        return fileChannel.write(src);
     }
 
-    // TODO
     @Override
-    public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
+    public long write(final ByteBuffer[] srcs, final int offset, final int length) throws IOException {
         logger.info("write {} {}", offset, length);
-        return 0;
+        return fileChannel.write(srcs, offset, length);
     }
 
     @Override
     public long position() throws IOException {
-        logger.info("position: {}", position);
-        return position;
+        logger.info("position");
+        return fileChannel.position();
     }
 
-    // TODO
     @Override
-    public FileChannel position(long newPosition) throws IOException {
-        logger.info("setting position ({}) to new position {}", position, newPosition);
-        this.position = newPosition;
+    public FileChannel position(final long newPosition) throws IOException {
+        logger.info("setting position ({}) to new position {}", fileChannel.position(), newPosition);
+        fileChannel.position(newPosition);
         return this;
     }
 
@@ -111,52 +129,48 @@ public class JcrFileChannel extends FileChannel {
     public long size() throws IOException {
         logger.info("size");
         try {
-            return binary().getSize();
+            return getBinary().getSize();
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
             throw new IOException(e);
         }
     }
 
-    // TODO
     @Override
-    public FileChannel truncate(long size) throws IOException {
+    public FileChannel truncate(final long size) throws IOException {
         logger.info("truncate", size);
+        fileChannel.truncate(size);
         return this;
     }
 
     // TODO
     @Override
-    public void force(boolean metaData) throws IOException {
+    public void force(final boolean metaData) throws IOException {
         logger.info("force {}", metaData);
     }
 
-    // TODO
     @Override
-    public long transferTo(long position, long count, WritableByteChannel target) throws IOException {
+    public long transferTo(final long position, final long count, final WritableByteChannel target) throws IOException {
         logger.info("transferTo {} {}", position, count);
-        return 0;
+        return fileChannel.transferTo(position, count, target);
     }
 
-    // TODO
     @Override
-    public long transferFrom(ReadableByteChannel src, long position, long count) throws IOException {
+    public long transferFrom(final ReadableByteChannel src, final long position, final long count) throws IOException {
         logger.info("transferFrom {} {}", position, count);
-        return 0;
+        return fileChannel.transferFrom(src, position, count);
     }
 
-    // TODO
     @Override
-    public int read(ByteBuffer dst, long position) throws IOException {
+    public int read(final ByteBuffer dst, final long position) throws IOException {
         logger.info("read {}", position);
-        return 0;
+        return fileChannel.read(dst, position);
     }
 
-    // TODO
     @Override
-    public int write(ByteBuffer src, long position) throws IOException {
+    public int write(final ByteBuffer src, final long position) throws IOException {
         logger.info("write {}", position);
-        return 0;
+        return fileChannel.write(src, position);
     }
 
     // TODO
@@ -180,10 +194,20 @@ public class JcrFileChannel extends FileChannel {
         return null;
     }
 
-    // TODO
     @Override
     protected void implCloseChannel() throws IOException {
         logger.info("implCloseChannel");
+        fileChannel.close();
+        try (final InputStream inputStream = Files.newInputStream(file, READ, DELETE_ON_CLOSE)) {
+            final Session session = node.getSession();
+            final ValueFactory valueFactory = session.getValueFactory();
+            final Binary binary = valueFactory.createBinary(inputStream);
+            setBinary(binary);
+            session.save();
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+            throw new IOException(e);
+        }
     }
 
 }

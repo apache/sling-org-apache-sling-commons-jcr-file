@@ -26,11 +26,9 @@ import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.WatchService;
 import java.nio.file.attribute.UserPrincipalLookupService;
-import java.nio.file.spi.FileSystemProvider;
 import java.util.Collections;
 import java.util.Set;
 
-import javax.jcr.Node;
 import javax.jcr.Session;
 
 import org.jetbrains.annotations.NotNull;
@@ -68,6 +66,12 @@ public class JcrFileSystem extends FileSystem {
     public void close() throws IOException {
         logger.info("close");
         provider.removeFromCache(this);
+        try {
+            session.save();
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+            throw new IOException(e);
+        }
         session.logout();
     }
 

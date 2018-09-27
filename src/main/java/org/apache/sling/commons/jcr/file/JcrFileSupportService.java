@@ -38,4 +38,7 @@ public interface JcrFileSupportService {
     @NotNull
     BasicFileAttributes fromPath(@NotNull final Path path) throws IOException;
 
+    @NotNull
+    Node newFile(@NotNull final Path path) throws RepositoryException;
+
 }

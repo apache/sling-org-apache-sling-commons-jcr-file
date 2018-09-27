@@ -118,6 +118,16 @@ public class DefaultJcrFileSupportService implements JcrFileSupportService {
         }
     }
 
+    @Override
+    public @NotNull Node newFile(@NotNull Path path) throws RepositoryException {
+        final JcrFileSystem fileSystem = (JcrFileSystem) path.getFileSystem();
+        final Session session = fileSystem.getSession();
+        final Node parent = session.getNode(path.getParent().toString());
+        final Node file = parent.addNode(path.getFileName().toString(), "nt:file");
+        final Node content = file.addNode("jcr:content", "nt:resource");
+        return file;
+    }
+
     private static FileTime timeFromProperty(final Node node, final String name) {
         try {
             final Property property = node.getProperty(name);

@@ -243,7 +243,7 @@ public class JcrPath implements Path {
     }
 
     @Override
-    public File toFile() {
+    public JcrFile toFile() {
         logger.info("to file: {}", path);
         return new JcrFile(fileSystem, path);
     }

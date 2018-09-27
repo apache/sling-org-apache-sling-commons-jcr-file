@@ -139,12 +139,19 @@ public class JcrFileSystemProvider extends FileSystemProvider {
     }
 
     // TODO
-    public FileChannel newFileChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
+    public FileChannel newFileChannel(final Path path, final Set<? extends OpenOption> options, final FileAttribute<?>... attrs) throws IOException {
         logger.info("newFileChannel");
         try {
-            final Node node = PathUtil.toNode(path);
+            final JcrPath jcrPath = (JcrPath) path;
+            final Node node;
+            if (jcrPath.toFile().exists()) {
+                node = PathUtil.toNode(path);
+            } else {
+                node = jcrFileSupportService.newFile(path);
+            }
             return new JcrFileChannel(node);
         } catch (Exception e) {
+            logger.error(e.getMessage(), e);
             throw new IOException(e);
         }
     }
@@ -157,6 +164,7 @@ public class JcrFileSystemProvider extends FileSystemProvider {
             final Node node = PathUtil.toNode(path);
             return new JcrFileChannel(node);
         } catch (Exception e) {
+            logger.error(e.getMessage(), e);
             throw new IOException(e);
         }
     }
