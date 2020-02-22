@@ -43,6 +43,7 @@ import static org.apache.sling.testing.paxexam.SlingVersionResolver.SLING_GROUP_
 import static org.ops4j.pax.exam.CoreOptions.composite;
 import static org.ops4j.pax.exam.CoreOptions.junitBundles;
 import static org.ops4j.pax.exam.CoreOptions.mavenBundle;
+import static org.ops4j.pax.exam.CoreOptions.options;
 import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfiguration;
 
 public abstract class JcrFileTestSupport extends TestSupport {
@@ -62,7 +63,7 @@ public abstract class JcrFileTestSupport extends TestSupport {
 
     @Configuration
     public Option[] configuration() {
-        return new Option[]{
+        return options(
             baseConfiguration(),
             quickstart(),
             // Sling Commons JCR File
@@ -75,7 +76,7 @@ public abstract class JcrFileTestSupport extends TestSupport {
             mavenBundle().groupId(SLING_GROUP_ID).artifactId("org.apache.sling.starter.content").version("1.0.0"),
             mavenBundle().groupId("org.apache.servicemix.bundles").artifactId("org.apache.servicemix.bundles.hamcrest").versionAsInProject(),
             junitBundles()
-        };
+        );
     }
 
     protected Option quickstart() {
